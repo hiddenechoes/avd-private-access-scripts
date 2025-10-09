@@ -1,0 +1,20 @@
+name: PR
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Pester + Analyzer
+        run: Install-Module Microsoft.PowerShell.PSResourceGet -Scope CurrentUser -Force -AllowClobber; Install-PSResource Pester,PSScriptAnalyzer -Scope CurrentUser -TrustRepository
+      - name: Lint
+        run: Invoke-ScriptAnalyzer -Path ./src -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+      - name: Unit tests
+        run: Invoke-Pester -CI -Path ./tests -Output Detailed
