@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Main
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download AvdPrivateAccess v0.2.0 from Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.2.0 \
+            -R hiddenechoes/AvdPrivateAccess \
+            -p 'AvdPrivateAccess-v0.2.0.zip'
+
+      - name: Install module into CurrentUser path
+        run: |
+          $zip = Get-Item AvdPrivateAccess-v0.2.0.zip
+          $tmp = Join-Path $env:RUNNER_TEMP 'avdmod'
+          Expand-Archive $zip.FullName -DestinationPath $tmp -Force
+          $mods = $env:PSModulePath -split [IO.Path]::PathSeparator
+          $dest = Join-Path $mods[0] 'AvdPrivateAccess/0.1.0'
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          Copy-Item -Recurse -Force (Join-Path $tmp 'module' '*') $dest
+          Import-Module AvdPrivateAccess -MinimumVersion 0.1.0 -Force
+          Get-Command -Module AvdPrivateAccess | Out-String | Write-Host
+
+      - name: Install Pester + Analyzer
+        run: |
+          Install-Module Microsoft.PowerShell.PSResourceGet -Scope CurrentUser -Force -AllowClobber
+          Install-PSResource Pester,PSScriptAnalyzer -Scope CurrentUser -TrustRepository
+
+      - name: Lint
+        run: Invoke-ScriptAnalyzer -Path ./src -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+
+      - name: Unit tests (mocked)
+        run: Invoke-Pester -CI -Path ./tests -Output Detailed
