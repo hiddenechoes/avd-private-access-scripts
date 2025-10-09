@@ -29,10 +29,10 @@ jobs:
           $tmp = Join-Path $env:RUNNER_TEMP 'avdmod'
           Expand-Archive $zip.FullName -DestinationPath $tmp -Force
           $mods = $env:PSModulePath -split [IO.Path]::PathSeparator
-          $dest = Join-Path $mods[0] 'AvdPrivateAccess/0.1.0'
+          $dest = Join-Path $mods[0] 'AvdPrivateAccess/0.2.0'
           New-Item -ItemType Directory -Force -Path $dest | Out-Null
           Copy-Item -Recurse -Force (Join-Path $tmp 'module' '*') $dest
-          Import-Module AvdPrivateAccess -MinimumVersion 0.1.0 -Force
+          Import-Module AvdPrivateAccess -MinimumVersion 0.2.0 -Force
           Get-Command -Module AvdPrivateAccess | Out-String | Write-Host
 
       - name: Install Pester + Analyzer
